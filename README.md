@@ -11,7 +11,7 @@ Why would you want to use this?
 
 ## How to use this
 
-⚠️ Work in progress: this is not yet implemented!
+_⚠️ Work in progress: the CLI still has some pretty rough edges!_
 
 Install `go-tfe-run` using go get:
 
@@ -22,7 +22,7 @@ go get github.com/kvrhdn/go-tfe-run
 Run it:
 
 ```
-go-tfe-run 
+go-tfe-run
 ```
 
 ## Using the library
