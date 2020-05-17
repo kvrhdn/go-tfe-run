@@ -9,6 +9,8 @@ Why would you want to use this?
 - You are in an environment without Terraform CLI.
 - You want to configure parameters that are not available using the CLI: you can for example set the name of the run or create a speculative run.
 
+If you wish to integrate this into your GitHub Actions workflows, checkout the [tfe-run action](https://github.com/marketplace/actions/tfe-run) which wraps `go-tfe-run` into a custom action.
+
 ## How to use this
 
 _⚠️ Work in progress: the CLI still has some pretty rough edges!_
