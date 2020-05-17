@@ -25,19 +25,25 @@ Run it:
 go-tfe-run
 ```
 
+Alternatively, clone this repository and run it directly:
+
+```
+go run .
+```
+
 ## Using the library
 
 Import `go-tfe-run/lib`:
 
-```
+```go
 import (
     tfe "github.com/kvhrnd/go-tfe-run/lib"
 )
 ```
 
-The library contains just one function: `Run`:
+The library contains just one function, `Run`:
 
-```
+```go
 options := tfe.RunOptions{
     Token:        "<your API token>",
     Organization: "kvrhdn",
