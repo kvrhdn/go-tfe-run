@@ -31,6 +31,9 @@ type RunOptions struct {
 	// Whether to create a speculative run. A speculative run can not be
 	// applied.
 	Speculative bool
+	// Whether we should wait for the non-speculative run to be applied. This
+	// will block until the run is finished.
+	WaitForCompletion bool
 	// Contents of a auto.tfvars file that will be uploaded to Terraform Cloud.
 	// This can be used to set Terraform variables. These variables will not be
 	// persisted.
@@ -45,11 +48,11 @@ type Output struct {
 	// indicate whether plan would cause changes, after a non-speculative run
 	// this indicates whether the run has caused any changes.
 	// This is not populated for non-speculative runs on workspaces that do not
-	// have auto-apply configured.
+	// have auto-apply configured or when WaitForCompletion is not set.
 	HasChanges bool
 	// Current outputs from the Terraform project.
 	// This is not populated for non-speculative runs on workspaces that do not
-	// have auto-apply configured.
+	// have auto-apply configured or when WaitForCompletion is not set.
 	TfOutputs map[string]string
 }
 
@@ -158,6 +161,11 @@ func Run(ctx context.Context, options RunOptions) (output Output, err error) {
 	// Speculative runs can always continue it seems.
 	if !options.Speculative && !w.AutoApply {
 		fmt.Print("Auto apply isn't enabled, won't wait for completion.\n")
+		return
+	}
+
+	if !options.WaitForCompletion {
+		fmt.Print("Won't wait for completion.\n")
 		return
 	}
 

@@ -47,13 +47,14 @@ The library contains just one function, `Run`:
 
 ```go
 options := tfe.RunOptions{
-    Token:        "<your API token>",
-    Organization: "kvrhdn",
-    Workspace:    "go-tfe-run",
-    Message:      "This run was created using go-tfe-run",
-    Directory:    "./",
-    Speculative:  false,
-    TfVars:       "",
+    Token:             "<your API token>",
+    Organization:      "kvrhdn",
+    Workspace:         "go-tfe-run",
+    Message:           "This run was created using go-tfe-run",
+    Directory:         "./",
+    Speculative:       false,
+    WaitForCompletion: true,
+    TfVars:            "",
 }
 
 output, err := tfe.Run(ctx, options)
