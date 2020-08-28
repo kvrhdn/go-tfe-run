@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/jessevdk/go-flags"
-	tfe "github.com/kvrhdn/go-tfe-run/lib"
+	tferun "github.com/kvrhdn/go-tfe-run/tfe-run"
 )
 
 type options struct {
@@ -32,7 +32,7 @@ func main() {
 
 	ctx := context.Background()
 
-	runOptions := tfe.RunOptions{
+	runOptions := tferun.RunOptions{
 		Token:             opts.Token,
 		Organization:      opts.Organization,
 		Workspace:         opts.Workspace,
@@ -43,7 +43,7 @@ func main() {
 		TfVars:            opts.TfVars,
 	}
 
-	_, err = tfe.Run(ctx, runOptions)
+	_, err = tferun.Run(ctx, runOptions)
 
 	if err != nil {
 		fmt.Printf("Error: run failed: %v", err)

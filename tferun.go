@@ -1,4 +1,6 @@
-package lib
+// Package tferun provides a single method Run to create and follow up a new
+// run on Terraform Enterprise or Cloud.
+package tferun
 
 import (
 	"context"
@@ -14,7 +16,7 @@ import (
 	"github.com/hashicorp/go-tfe"
 )
 
-// RunOptions groups all options to create a new run.
+// RunOptions groups all options available when creating a new run.
 type RunOptions struct {
 	// Token is used to communicate with the Terraform Cloud API. Must be a
 	// user or team API token.
