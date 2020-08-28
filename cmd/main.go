@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/jessevdk/go-flags"
-	tferun "github.com/kvrhdn/go-tfe-run/tfe-run"
+	tferun "github.com/kvrhdn/go-tfe-run"
 )
 
 type options struct {
