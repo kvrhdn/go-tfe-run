@@ -1,19 +1,20 @@
-# `go-tfe-run`
+# `go-tfe-run` [![PkgGoDev](https://pkg.go.dev/badge/github.com/kvrhdn/go-tfe-run)](https://pkg.go.dev/github.com/kvrhdn/go-tfe-run?tab=doc)
 
-A command line utility and Go library to create a run on Terraform Cloud. This utility will use the [Terraform Cloud API][api], and does not rely on a local Terraform installation.
+[![Go Report Card](https://goreportcard.com/badge/github.com/kvrhdn/go-tfe-run)](https://goreportcard.com/report/github.com/kvrhdn/go-tfe-run)
 
-[api]: https://www.terraform.io/docs/cloud/run/api.html
+A Go library and command line utility to create and follow up on a run on Terraform Cloud. This library uses the [Terraform Cloud API][https://www.terraform.io/docs/cloud/run/api.html] and does not rely on a local Terraform installation.
 
-Why would you want to use this?
+When is ths useful?
 
-- You are in an environment without Terraform CLI.
-- You want to configure parameters that are not available using the CLI: you can for example set the name of the run or create a speculative run.
+- You want to configure parameters that are not available using the CLI, for example the name of the run or whether it is a speculative plan.
+- You want to schedule a run but not wait for completion.
+- You are in an environment without Terraform CLI installed.
 
 If you wish to integrate this into your GitHub Actions workflows, checkout the [tfe-run action](https://github.com/marketplace/actions/tfe-run) which wraps `go-tfe-run` into a custom action.
 
-## How to use this
+Visit [the documentation on pkg.go.dev](https://pkg.go.dev/github.com/kvrhdn/go-tfe-run?tab=doc).
 
-_⚠️ Work in progress: the CLI still has some pretty rough edges!_
+## Using the CLI
 
 Install `go-tfe-run` using go get:
 
@@ -24,42 +25,7 @@ go get github.com/kvrhdn/go-tfe-run
 Run it:
 
 ```
-go-tfe-run
-```
-
-Alternatively, clone this repository and run it directly:
-
-```
-go run .
-```
-
-## Using the library
-
-Import `go-tfe-run/lib`:
-
-```go
-import (
-    tfe "github.com/kvhrnd/go-tfe-run/lib"
-)
-```
-
-The library contains just one function, `Run`:
-
-```go
-options := tfe.RunOptions{
-    Token:             "<your API token>",
-    Organization:      "kvrhdn",
-    Workspace:         "go-tfe-run",
-    Message:           "This run was created using go-tfe-run",
-    Directory:         "./",
-    Speculative:       false,
-    WaitForCompletion: true,
-    TfVars:            "",
-}
-
-output, err := tfe.Run(ctx, options)
-
-// handle err
+go-tfe-run --help
 ```
 
 ## License
