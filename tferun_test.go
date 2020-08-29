@@ -23,7 +23,7 @@ func Example() {
 	fmt.Printf("Run created: %v", output.RunURL)
 }
 
-func ExampleRun_TfVars() {
+func Example_tfVars() {
 	token := os.Getenv("TFE_TOKEN")
 
 	options := RunOptions{
