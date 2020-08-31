@@ -156,12 +156,13 @@ func Run(ctx context.Context, options RunOptions) (output RunOutput, err error) 
 		return
 	}
 
+	runID := r.ID
 	runURL := fmt.Sprintf(
 		"https://app.terraform.io/app/%v/workspaces/%v/runs/%v",
-		options.Organization, options.Workspace, r.ID,
+		options.Organization, options.Workspace, runID,
 	)
 
-	fmt.Printf("Run %v has been queued\n", r.ID)
+	fmt.Printf("Run %v has been queued\n", runID)
 	fmt.Printf("View the run online:\n")
 	fmt.Printf("%v\n", runURL)
 
@@ -183,9 +184,9 @@ func Run(ctx context.Context, options RunOptions) (output RunOutput, err error) 
 
 	var prevStatus tfe.RunStatus
 	for {
-		r, err = client.Runs.Read(ctx, r.ID)
+		r, err = client.Runs.Read(ctx, runID)
 		if err != nil {
-			err = fmt.Errorf("could not read run '%v': %v", r.ID, err)
+			err = fmt.Errorf("could not read run '%v': %v", runID, err)
 			return
 		}
 
