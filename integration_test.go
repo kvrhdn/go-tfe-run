@@ -11,6 +11,10 @@ import (
 func TestIntegration(t *testing.T) {
 	ctx := context.Background()
 
+	if testing.Short() {
+		t.Skip()
+	}
+
 	token, ok := os.LookupEnv("TFE_TOKEN")
 	if !ok {
 		t.Fatal("Expected environment variable TFE_TOKEN to be set")
