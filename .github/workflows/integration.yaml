@@ -21,4 +21,4 @@ jobs:
 
       - run: go test -v --run Integration
         env:
-          TFE_TOKEN: ${{ secrests.TFE_TOKEN }}
+          TFE_TOKEN: ${{ secrets.TFE_TOKEN }}
