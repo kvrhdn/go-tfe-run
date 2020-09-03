@@ -7,6 +7,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: kvrhdn/gha-buildevents@v1
+        with:
+          apikey: ${{ secrets.HONEYCOMB_APIKEY }}
+          dataset: go-tfe-run
+          job-status: ${{ job.status }}
+
       - uses: actions/checkout@v2
 
       - uses: actions/setup-go@v2
