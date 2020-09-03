@@ -1,0 +1,24 @@
+name: Integration
+
+on:
+  push:
+  schedule:
+    - cron: "0 * * * *"
+
+jobs:
+  integration:
+    name: Integration test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: kvrhdn/gha-buildevents@v1
+        with:
+          apikey: ${{ secrets.HONEYCOMB_APIKEY }}
+          dataset: go-tfe-run
+          job-status: ${{ job.status }}
+
+      - uses: actions/checkout@v2
+
+      - run: go test -v --run Integration
+        env:
+          TFE_TOKEN: ${{ secrests.TFE_TOKEN }}

@@ -1,2 +1,7 @@
 # default executable
 go-tfe-run
+
+# Terraform
+.terraform/
+*.tfstate*
+*.auto.tfvars
