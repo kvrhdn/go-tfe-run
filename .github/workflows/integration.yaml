@@ -7,7 +7,7 @@ on:
 
 jobs:
   integration:
-    name: Integration test
+    name: Integration
     runs-on: ubuntu-latest
 
     steps:
@@ -16,6 +16,10 @@ jobs:
           apikey: ${{ secrets.HONEYCOMB_APIKEY }}
           dataset: go-tfe-run
           job-status: ${{ job.status }}
+
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.15
 
       - uses: actions/checkout@v2
 
