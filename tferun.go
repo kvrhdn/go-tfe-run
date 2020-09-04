@@ -16,8 +16,8 @@ import (
 	"github.com/hashicorp/go-tfe"
 )
 
-// RunOptions groups all options available when creating a new run.
-type RunOptions struct {
+// ClientConfig groups properties to configure a Client.
+type ClientConfig struct {
 	// Token used to communicate with the Terraform Cloud API. Must be a user
 	// or team API token.
 	Token string
@@ -25,6 +25,39 @@ type RunOptions struct {
 	Organization string
 	// The workspace on Terraform Cloud.
 	Workspace string
+}
+
+// Client is used to interact with the Run API of a single workspace on
+// Terraform Cloud.
+type Client struct {
+	client    *tfe.Client
+	workspace *tfe.Workspace
+}
+
+// NewClient creates a Client from ClientConfig.
+func NewClient(ctx context.Context, cfg ClientConfig) (*Client, error) {
+	config := &tfe.Config{
+		Token: cfg.Token,
+	}
+	tfeClient, err := tfe.NewClient(config)
+	if err != nil {
+		return nil, fmt.Errorf("could not create a new TFE tfeClient: %w", err)
+	}
+
+	w, err := tfeClient.Workspaces.Read(ctx, cfg.Organization, cfg.Workspace)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve workspace '%v/%v': %w", cfg.Organization, cfg.Workspace, err)
+	}
+
+	c := Client{
+		client:    tfeClient,
+		workspace: w,
+	}
+	return &c, nil
+}
+
+// RunOptions groups all options available when creating a new run.
+type RunOptions struct {
 	// Message to use as name of the run. This field is optional.
 	Message *string
 	// The directory that is uploaded to Terraform Cloud, respects
@@ -64,29 +97,14 @@ type RunOutput struct {
 // is finished, except if the run is non-speculative and the workspace has
 // disabled auto-apply. If auto-apply is disabled this method might block
 // indefinitely.
-func Run(ctx context.Context, options RunOptions) (output RunOutput, err error) {
-	config := &tfe.Config{
-		Token: options.Token,
-	}
-	client, err := tfe.NewClient(config)
-	if err != nil {
-		err = fmt.Errorf("could not create a new TFE client: %w", err)
-		return
-	}
-
-	w, err := client.Workspaces.Read(ctx, options.Organization, options.Workspace)
-	if err != nil {
-		err = fmt.Errorf("could not retrieve workspace '%v/%v': %w", options.Organization, options.Workspace, err)
-		return
-	}
-
+func (c *Client) Run(ctx context.Context, options RunOptions) (output RunOutput, err error) {
 	cvOptions := tfe.ConfigurationVersionCreateOptions{
 		// Don't automatically queue the new run, we want to create the run
 		// manually to be able to set the message.
 		AutoQueueRuns: tfe.Bool(false),
 		Speculative:   &options.Speculative,
 	}
-	cv, err := client.ConfigurationVersions.Create(ctx, w.ID, cvOptions)
+	cv, err := c.client.ConfigurationVersions.Create(ctx, c.workspace.ID, cvOptions)
 	if err != nil {
 		if err == tfe.ErrResourceNotFound {
 			err = fmt.Errorf("could not create configuration version (404 not found), this might happen if you are not using a user or team API token")
@@ -106,7 +124,7 @@ func Run(ctx context.Context, options RunOptions) (output RunOutput, err error) 
 		// code is the easiest way to temporarily set a variable. The Terraform
 		// Cloud API only allows setting workspace variables. These variables
 		// are persistent across runs which might cause undesired side-effects.
-		varsFile := filepath.Join(dir, w.WorkingDirectory, "run.auto.tfvars")
+		varsFile := filepath.Join(dir, c.workspace.WorkingDirectory, "run.auto.tfvars")
 
 		fmt.Printf("Creating variables file %v\n", varsFile)
 
@@ -126,7 +144,7 @@ func Run(ctx context.Context, options RunOptions) (output RunOutput, err error) 
 
 	fmt.Print("Uploading directory...\n")
 
-	err = client.ConfigurationVersions.Upload(ctx, cv.UploadURL, dir)
+	err = c.client.ConfigurationVersions.Upload(ctx, cv.UploadURL, dir)
 	if err != nil {
 		err = fmt.Errorf("could not upload directory '%v': %w", options.Directory, err)
 		return
@@ -141,11 +159,11 @@ func Run(ctx context.Context, options RunOptions) (output RunOutput, err error) 
 	// https://github.com/hashicorp/go-tfe/issues/116
 	err = retry.Do(func() error {
 		rOptions := tfe.RunCreateOptions{
-			Workspace:            w,
+			Workspace:            c.workspace,
 			ConfigurationVersion: cv,
 			Message:              options.Message,
 		}
-		r, err = client.Runs.Create(ctx, rOptions)
+		r, err = c.client.Runs.Create(ctx, rOptions)
 		if err != nil {
 			err = fmt.Errorf("could not create run: %w", err)
 			return err
@@ -159,7 +177,7 @@ func Run(ctx context.Context, options RunOptions) (output RunOutput, err error) 
 	runID := r.ID
 	runURL := fmt.Sprintf(
 		"https://app.terraform.io/app/%v/workspaces/%v/runs/%v",
-		options.Organization, options.Workspace, runID,
+		c.workspace.Organization.Name, c.workspace.Name, runID,
 	)
 
 	fmt.Printf("Run %v has been queued\n", runID)
@@ -172,7 +190,7 @@ func Run(ctx context.Context, options RunOptions) (output RunOutput, err error) 
 	// the run itself wouldn't change anything the previous run could still be
 	// blocked waiting for confirmation.
 	// Speculative runs can always continue.
-	if !options.Speculative && !w.AutoApply {
+	if !options.Speculative && !c.workspace.AutoApply {
 		fmt.Print("Auto apply isn't enabled, won't wait for completion.\n")
 		return
 	}
@@ -184,7 +202,7 @@ func Run(ctx context.Context, options RunOptions) (output RunOutput, err error) 
 
 	var prevStatus tfe.RunStatus
 	for {
-		r, err = client.Runs.Read(ctx, runID)
+		r, err = c.client.Runs.Read(ctx, runID)
 		if err != nil {
 			err = fmt.Errorf("could not read run '%v': %v", runID, err)
 			return
@@ -223,7 +241,7 @@ func Run(ctx context.Context, options RunOptions) (output RunOutput, err error) 
 		return
 	}
 
-	outputs, err := retrieveOutputs(ctx, client, w.ID)
+	outputs, err := c.retrieveOutputs(ctx)
 	output.TfOutputs = &outputs
 
 	return
@@ -258,14 +276,14 @@ type terraformOutput struct {
 	Value string `json:"value"`
 }
 
-func retrieveOutputs(ctx context.Context, client *tfe.Client, workspaceID string) (outputs map[string]string, err error) {
-	s, err := client.StateVersions.Current(ctx, workspaceID)
+func (c *Client) retrieveOutputs(ctx context.Context) (outputs map[string]string, err error) {
+	s, err := c.client.StateVersions.Current(ctx, c.workspace.ID)
 	if err != nil {
 		err = fmt.Errorf("could not fetch current state: %w", err)
 		return
 	}
 
-	bytes, err := client.StateVersions.Download(ctx, s.DownloadURL)
+	bytes, err := c.client.StateVersions.Download(ctx, s.DownloadURL)
 	if err != nil {
 		err = fmt.Errorf("could not download state version: %w", err)
 		return

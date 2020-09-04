@@ -24,28 +24,36 @@ func main() {
 	var opts options
 
 	_, err := flags.Parse(&opts)
-
 	if err != nil {
 		os.Exit(1)
 	}
 
 	ctx := context.Background()
 
+	cfg := tferun.ClientConfig{
+		Token:        opts.Token,
+		Organization: opts.Organization,
+		Workspace:    opts.Workspace,
+	}
+	c, err := tferun.NewClient(ctx, cfg)
+	if err != nil {
+		exitWithError(err)
+	}
+
 	runOptions := tferun.RunOptions{
-		Token:             opts.Token,
-		Organization:      opts.Organization,
-		Workspace:         opts.Workspace,
 		Message:           opts.Message,
 		Directory:         opts.Directory,
 		Speculative:       opts.Speculative,
 		WaitForCompletion: opts.WaitForCompletion,
 		TfVars:            opts.TfVars,
 	}
-
-	_, err = tferun.Run(ctx, runOptions)
-
+	_, err = c.Run(ctx, runOptions)
 	if err != nil {
-		fmt.Printf("Error: run failed: %v\n", err)
-		os.Exit(1)
+		exitWithError(err)
 	}
+}
+
+func exitWithError(err error) {
+	fmt.Printf("Error: %v\n", err)
+	os.Exit(1)
 }

@@ -25,43 +25,47 @@ func TestIntegration(t *testing.T) {
 		t.Fatal("Expected environment variable GITHUB_RUN_NUMBER to be set")
 	}
 
+	cfg := ClientConfig{
+		Token:        token,
+		Organization: "kvrhdn",
+		Workspace:    "go-tfe-run",
+	}
+	client, err := NewClient(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	t.Run("Speculative run, with changes", func(t *testing.T) {
 		planOptions := RunOptions{
-			Token:             token,
-			Organization:      "kvrhdn",
-			Workspace:         "go-tfe-run",
 			Message:           String(fmt.Sprintf("Plan for %s", runNr)),
 			Directory:         String("./testdata"),
 			Speculative:       true,
 			WaitForCompletion: true,
 			TfVars:            String(fmt.Sprintf("github_run_number = \"%s\"", runNr)),
 		}
-		planOutput, err := Run(ctx, planOptions)
+		planOutput, err := client.Run(ctx, planOptions)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		assert.NotEmpty(t, planOutput.RunURL)
+		assert.Contains(t, planOutput.RunURL, "https://app.terraform.io/app/kvrhdn/workspaces/go-tfe-run/runs/run-")
 		assert.Equal(t, true, *planOutput.HasChanges)
 	})
 
 	t.Run("Non-speculative run, with changes", func(t *testing.T) {
 		applyOptions := RunOptions{
-			Token:             token,
-			Organization:      "kvrhdn",
-			Workspace:         "go-tfe-run",
 			Message:           String(fmt.Sprintf("Apply of run %s", runNr)),
 			Directory:         String("./testdata"),
 			Speculative:       false,
 			WaitForCompletion: true,
 			TfVars:            String(fmt.Sprintf("github_run_number = \"%s\"", runNr)),
 		}
-		applyOutput, err := Run(ctx, applyOptions)
+		applyOutput, err := client.Run(ctx, applyOptions)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		assert.NotEmpty(t, applyOutput.RunURL)
+		assert.Contains(t, applyOutput.RunURL, "https://app.terraform.io/app/kvrhdn/workspaces/go-tfe-run/runs/run-")
 		assert.Equal(t, true, *applyOutput.HasChanges)
 
 		expectedOutputs := map[string]string{
@@ -72,21 +76,18 @@ func TestIntegration(t *testing.T) {
 
 	t.Run("Speculative run, no changes", func(t *testing.T) {
 		planOptions := RunOptions{
-			Token:             token,
-			Organization:      "kvrhdn",
-			Workspace:         "go-tfe-run",
 			Message:           String(fmt.Sprintf("Plan for %s", runNr)),
 			Directory:         String("./testdata"),
 			Speculative:       true,
 			WaitForCompletion: true,
 			TfVars:            String(fmt.Sprintf("github_run_number = \"%s\"", runNr)),
 		}
-		planOutput, err := Run(ctx, planOptions)
+		planOutput, err := client.Run(ctx, planOptions)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		assert.NotEmpty(t, planOutput.RunURL)
+		assert.Contains(t, planOutput.RunURL, "https://app.terraform.io/app/kvrhdn/workspaces/go-tfe-run/runs/run-")
 		assert.Equal(t, false, *planOutput.HasChanges)
 	})
 }
