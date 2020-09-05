@@ -1,7 +1,6 @@
 name: Integration
 
 on:
-  push:
   schedule:
     - cron: "0 * * * *"
 
