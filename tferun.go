@@ -5,6 +5,7 @@ package tferun
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -12,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/avast/retry-go"
 	"github.com/hashicorp/go-tfe"
 )
 
@@ -110,9 +110,11 @@ func (c *Client) Run(ctx context.Context, options RunOptions) (output RunOutput,
 		return
 	}
 
-	dir := "./"
+	var dir string
 	if options.Directory != nil {
 		dir = *options.Directory
+	} else {
+		dir = "./"
 	}
 
 	if options.TfVars != nil {
@@ -122,7 +124,7 @@ func (c *Client) Run(ctx context.Context, options RunOptions) (output RunOutput,
 		// are persistent across runs which might cause undesired side-effects.
 		varsFile := filepath.Join(dir, c.workspace.WorkingDirectory, "run.auto.tfvars")
 
-		fmt.Printf("Creating variables file %v\n", varsFile)
+		fmt.Printf("Creating temporary variables file %v\n", varsFile)
 
 		err = ioutil.WriteFile(varsFile, []byte(*options.TfVars), 0644)
 		if err != nil {
@@ -148,25 +150,33 @@ func (c *Client) Run(ctx context.Context, options RunOptions) (output RunOutput,
 
 	fmt.Print("Done uploading.\n")
 
+	// wait until configuration version has status Uploaded
+	// this is also done in the Terraform implementation: https://github.com/hashicorp/terraform/blob/v0.13.1/backend/remote/backend_plan.go#L204-L231
+	err = pollWithContext(ctx, 5*time.Second, func() (bool, error) {
+		cv, err = c.client.ConfigurationVersions.Read(ctx, cv.ID)
+		if err != nil {
+			// if getting the configuration fails, just retry later
+			return false, nil
+		}
+		return cv.Status == tfe.ConfigurationUploaded, nil
+	})
+	if err != nil {
+		err = fmt.Errorf("uploading configuration version failed: %w", err)
+		return
+	}
+
+	fmt.Print("Configuration version is in status uploaded.\n")
+
 	var r *tfe.Run
 
-	// Runs.Create is put within a retry block since this call sporadically
-	// fails with a cryptic error 'invalid run parameters'
-	// https://github.com/hashicorp/go-tfe/issues/116
-	err = retry.Do(func() error {
-		rOptions := tfe.RunCreateOptions{
-			Workspace:            c.workspace,
-			ConfigurationVersion: cv,
-			Message:              options.Message,
-		}
-		r, err = c.client.Runs.Create(ctx, rOptions)
-		if err != nil {
-			err = fmt.Errorf("could not create run: %w", err)
-			return err
-		}
-		return nil
-	}, retry.Delay(1*time.Second))
+	rOptions := tfe.RunCreateOptions{
+		Workspace:            c.workspace,
+		ConfigurationVersion: cv,
+		Message:              options.Message,
+	}
+	r, err = c.client.Runs.Create(ctx, rOptions)
 	if err != nil {
+		err = fmt.Errorf("could not create run: %w", err)
 		return
 	}
 
@@ -294,4 +304,32 @@ func (c *Client) GetTerraformOutputs(ctx context.Context) (map[string]string, er
 	}
 
 	return outputs, nil
+}
+
+var (
+	ErrTimeout = errors.New("operation timed out")
+)
+
+// pollWithContext will execute pollFn every 500 milliseconds until either
+// pollFn returns (true, nil) or (false, err). If more than timeout time has
+// elapsed since the start of pollWithContext, ErrTimeout is returned.
+func pollWithContext(ctx context.Context, timeout time.Duration, pollFn func() (success bool, err error)) error {
+	start := time.Now()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return context.Canceled
+		case <-time.After(500 * time.Millisecond):
+			success, err := pollFn()
+			if err != nil || success {
+				return err
+			}
+
+			if time.Since(start) > timeout {
+				return ErrTimeout
+			}
+		}
+	}
+
 }
