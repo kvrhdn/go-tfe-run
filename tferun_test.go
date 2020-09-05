@@ -59,3 +59,27 @@ func Example_tfVars() {
 
 	fmt.Printf("Run created: %v", output.RunURL)
 }
+
+func ExampleClient_GetTerraformOutputs() {
+	ctx := context.TODO()
+	token := os.Getenv("TFE_TOKEN")
+
+	cfg := ClientConfig{
+		Token:        token,
+		Organization: "kvrhdn",
+		Workspace:    "tfe-run",
+	}
+	client, err := NewClient(ctx, cfg)
+	if err != nil {
+		fmt.Printf("could not create client: %v\n", err)
+		os.Exit(1)
+	}
+
+	outputs, err := client.GetTerraformOutputs(ctx)
+	if err != nil {
+		fmt.Printf("could not create client: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Current outputs: %v", outputs)
+}

@@ -44,10 +44,8 @@ func TestIntegration(t *testing.T) {
 			TfVars:            String(fmt.Sprintf("github_run_number = \"%s\"", runNr)),
 		}
 		planOutput, err := client.Run(ctx, planOptions)
-		if err != nil {
-			t.Fatal(err)
-		}
 
+		assert.NoError(t, err)
 		assert.Contains(t, planOutput.RunURL, "https://app.terraform.io/app/kvrhdn/workspaces/go-tfe-run/runs/run-")
 		assert.Equal(t, true, *planOutput.HasChanges)
 	})
@@ -61,17 +59,21 @@ func TestIntegration(t *testing.T) {
 			TfVars:            String(fmt.Sprintf("github_run_number = \"%s\"", runNr)),
 		}
 		applyOutput, err := client.Run(ctx, applyOptions)
-		if err != nil {
-			t.Fatal(err)
-		}
 
+		assert.NoError(t, err)
 		assert.Contains(t, applyOutput.RunURL, "https://app.terraform.io/app/kvrhdn/workspaces/go-tfe-run/runs/run-")
 		assert.Equal(t, true, *applyOutput.HasChanges)
+	})
+
+	t.Run("Get terraform outputs", func(t *testing.T) {
+		outputs, err := client.GetTerraformOutputs(ctx)
+
+		assert.NoError(t, err)
 
 		expectedOutputs := map[string]string{
 			"marker_message": fmt.Sprintf("Integration - run %s", runNr),
 		}
-		assert.Equal(t, expectedOutputs, *applyOutput.TfOutputs)
+		assert.Equal(t, expectedOutputs, outputs)
 	})
 
 	t.Run("Speculative run, no changes", func(t *testing.T) {
@@ -83,10 +85,8 @@ func TestIntegration(t *testing.T) {
 			TfVars:            String(fmt.Sprintf("github_run_number = \"%s\"", runNr)),
 		}
 		planOutput, err := client.Run(ctx, planOptions)
-		if err != nil {
-			t.Fatal(err)
-		}
 
+		assert.NoError(t, err)
 		assert.Contains(t, planOutput.RunURL, "https://app.terraform.io/app/kvrhdn/workspaces/go-tfe-run/runs/run-")
 		assert.Equal(t, false, *planOutput.HasChanges)
 	})

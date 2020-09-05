@@ -85,10 +85,6 @@ type RunOutput struct {
 	// This is not populated for non-speculative runs on workspaces that do not
 	// have auto-apply configured or when WaitForCompletion is not set.
 	HasChanges *bool
-	// Current outputs from the Terraform project.
-	// This is not populated for non-speculative runs on workspaces that do not
-	// have auto-apply configured or when WaitForCompletion is not set.
-	TfOutputs *map[string]string
 }
 
 // Run creates a new run on Terraform Cloud.
@@ -237,13 +233,6 @@ func (c *Client) Run(ctx context.Context, options RunOptions) (output RunOutput,
 		err = fmt.Errorf("run %v has errored", r.ID)
 	}
 
-	if err != nil {
-		return
-	}
-
-	outputs, err := c.retrieveOutputs(ctx)
-	output.TfOutputs = &outputs
-
 	return
 }
 
@@ -276,27 +265,25 @@ type terraformOutput struct {
 	Value string `json:"value"`
 }
 
-func (c *Client) retrieveOutputs(ctx context.Context) (outputs map[string]string, err error) {
+// GetTerraformOutputs retrieves the outputs from the current Terraform state.
+func (c *Client) GetTerraformOutputs(ctx context.Context) (map[string]string, error) {
 	s, err := c.client.StateVersions.Current(ctx, c.workspace.ID)
 	if err != nil {
-		err = fmt.Errorf("could not fetch current state: %w", err)
-		return
+		return nil, fmt.Errorf("could not get current state: %w", err)
 	}
 
 	bytes, err := c.client.StateVersions.Download(ctx, s.DownloadURL)
 	if err != nil {
-		err = fmt.Errorf("could not download state version: %w", err)
-		return
+		return nil, fmt.Errorf("could not download state: %w", err)
 	}
 
 	var state minimalTerraformState
 	err = json.Unmarshal(bytes, &state)
 	if err != nil {
-		err = fmt.Errorf("could not parse state version: %w", err)
-		return
+		return nil, fmt.Errorf("could not parse state: %w", err)
 	}
 
-	outputs = map[string]string{}
+	outputs := make(map[string]string)
 	for k, v := range state.Outputs {
 		outputs[k] = v.Value
 	}
@@ -306,5 +293,5 @@ func (c *Client) retrieveOutputs(ctx context.Context) (outputs map[string]string
 		fmt.Printf(" - %v: %v\n", k, v)
 	}
 
-	return
+	return outputs, nil
 }
