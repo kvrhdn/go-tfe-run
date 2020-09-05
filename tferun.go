@@ -1,5 +1,8 @@
-// Package tferun provides a single method Run to create and follow up a run on
-// Terraform Enterprise or Cloud.
+// Package tferun provides a single simplified methods to schedule runs and
+// retrieve outputs from a remote workspace on Terraform Enterprise or Cloud.
+//
+// These methods are intended to be run as part of a CLI and will print
+// information to stdout.
 package tferun
 
 import (
@@ -91,8 +94,9 @@ type RunOutput struct {
 //
 // If RunOptions.WaitForCompletion is set this method will block until the run
 // is finished, except if the run is non-speculative and the workspace has
-// disabled auto-apply. If auto-apply is disabled this method might block
-// indefinitely.
+// disabled auto-apply (to avoid blocking indefinitely).
+// If the run does not complete within one hour, ErrTimeout is returned. This
+// will not cancel the remote operation.
 func (c *Client) Run(ctx context.Context, options RunOptions) (output RunOutput, err error) {
 	cvOptions := tfe.ConfigurationVersionCreateOptions{
 		// Don't automatically queue the new run, we want to create the run
@@ -158,7 +162,7 @@ func (c *Client) Run(ctx context.Context, options RunOptions) (output RunOutput,
 			return false, fmt.Errorf("could not get current configuration version: %w", err)
 		}
 		if cv.Status == tfe.ConfigurationErrored {
-			return false, errors.New("configuration version errored")
+			return false, fmt.Errorf("configuration version errored: %v - %v", cv.Error, cv.ErrorMessage)
 		}
 		return cv.Status == tfe.ConfigurationUploaded, nil
 	})
@@ -182,17 +186,18 @@ func (c *Client) Run(ctx context.Context, options RunOptions) (output RunOutput,
 		return
 	}
 
-	runID := r.ID
-	runURL := fmt.Sprintf(
+	output.RunURL = fmt.Sprintf(
 		"https://app.terraform.io/app/%v/workspaces/%v/runs/%v",
-		c.workspace.Organization.Name, c.workspace.Name, runID,
+		c.workspace.Organization.Name, c.workspace.Name, r.ID,
 	)
 
-	fmt.Printf("Run %v has been queued\n", runID)
+	fmt.Printf("Run %v has been queued\n", r.ID)
 	fmt.Printf("View the run online:\n")
-	fmt.Printf("%v\n", runURL)
+	fmt.Printf("%v\n", output.RunURL)
 
-	output.RunURL = runURL
+	if !options.WaitForCompletion {
+		return
+	}
 
 	// If auto apply isn't enabled a run could hang for a long time, even if
 	// the run itself wouldn't change anything the previous run could still be
@@ -203,17 +208,12 @@ func (c *Client) Run(ctx context.Context, options RunOptions) (output RunOutput,
 		return
 	}
 
-	if !options.WaitForCompletion {
-		fmt.Print("Won't wait for completion.\n")
-		return
-	}
-
 	var prevStatus tfe.RunStatus
 
 	err = pollWithContext(ctx, 60*time.Minute, func() (bool, error) {
-		r, err = c.client.Runs.Read(ctx, runID)
+		r, err = c.client.Runs.Read(ctx, r.ID)
 		if err != nil {
-			return false, fmt.Errorf("could not read run '%v': %w", runID, err)
+			return false, fmt.Errorf("could not read run: %w", err)
 		}
 
 		if prevStatus != r.Status {
@@ -231,18 +231,12 @@ func (c *Client) Run(ctx context.Context, options RunOptions) (output RunOutput,
 	output.HasChanges = tfe.Bool(r.HasChanges)
 
 	switch r.Status {
-
 	case tfe.RunPlannedAndFinished:
 		fmt.Println("Run is planned and finished.")
 	case tfe.RunApplied:
 		fmt.Println("Run has been applied!")
-
-	case tfe.RunCanceled:
-		err = fmt.Errorf("run %v has been canceled", r.ID)
-	case tfe.RunDiscarded:
-		err = fmt.Errorf("run %v has been discarded", r.ID)
-	case tfe.RunErrored:
-		err = fmt.Errorf("run %v has errored", r.ID)
+	default:
+		err = fmt.Errorf("run %v finished with status %v", r.ID, prettyPrint(r.Status))
 	}
 
 	return
@@ -309,7 +303,8 @@ func (c *Client) GetTerraformOutputs(ctx context.Context) (map[string]string, er
 }
 
 var (
-	ErrTimeout = errors.New("operation timed out")
+	// ErrTimeout is returned when an operation timed out.
+	ErrTimeout = errors.New("timed out while polling")
 )
 
 // pollWithContext will execute pollFn every 500 milliseconds until either
@@ -333,5 +328,4 @@ func pollWithContext(ctx context.Context, timeout time.Duration, pollFn func() (
 			}
 		}
 	}
-
 }
