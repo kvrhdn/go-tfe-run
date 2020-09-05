@@ -155,8 +155,10 @@ func (c *Client) Run(ctx context.Context, options RunOptions) (output RunOutput,
 	err = pollWithContext(ctx, 5*time.Second, func() (bool, error) {
 		cv, err = c.client.ConfigurationVersions.Read(ctx, cv.ID)
 		if err != nil {
-			// if getting the configuration fails, just retry later
-			return false, nil
+			return false, fmt.Errorf("could not get current configuration version: %w", err)
+		}
+		if cv.Status == tfe.ConfigurationErrored {
+			return false, errors.New("configuration version errored")
 		}
 		return cv.Status == tfe.ConfigurationUploaded, nil
 	})
@@ -165,7 +167,7 @@ func (c *Client) Run(ctx context.Context, options RunOptions) (output RunOutput,
 		return
 	}
 
-	fmt.Print("Configuration version is in status uploaded.\n")
+	fmt.Print("Configuration version is uploaded and processed.\n")
 
 	var r *tfe.Run
 
@@ -207,11 +209,11 @@ func (c *Client) Run(ctx context.Context, options RunOptions) (output RunOutput,
 	}
 
 	var prevStatus tfe.RunStatus
-	for {
+
+	err = pollWithContext(ctx, 60*time.Minute, func() (bool, error) {
 		r, err = c.client.Runs.Read(ctx, runID)
 		if err != nil {
-			err = fmt.Errorf("could not read run '%v': %v", runID, err)
-			return
+			return false, fmt.Errorf("could not read run '%v': %w", runID, err)
 		}
 
 		if prevStatus != r.Status {
@@ -219,11 +221,11 @@ func (c *Client) Run(ctx context.Context, options RunOptions) (output RunOutput,
 			prevStatus = r.Status
 		}
 
-		if isEndStatus(r.Status) {
-			break
-		}
-
-		time.Sleep(500 * time.Millisecond)
+		return isEndStatus(r.Status), nil
+	})
+	if err != nil {
+		err = fmt.Errorf("waiting for completion of run failed: %w", err)
+		return
 	}
 
 	output.HasChanges = tfe.Bool(r.HasChanges)
@@ -231,7 +233,7 @@ func (c *Client) Run(ctx context.Context, options RunOptions) (output RunOutput,
 	switch r.Status {
 
 	case tfe.RunPlannedAndFinished:
-		fmt.Println("Run has been planned, nothing to do.")
+		fmt.Println("Run is planned and finished.")
 	case tfe.RunApplied:
 		fmt.Println("Run has been applied!")
 
