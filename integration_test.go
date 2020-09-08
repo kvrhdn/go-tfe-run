@@ -37,7 +37,7 @@ func TestIntegration(t *testing.T) {
 
 	t.Run("Plan - should have changes", func(t *testing.T) {
 		planOptions := RunOptions{
-			Message:           String(fmt.Sprintf("Plan for %s", runNr)),
+			Message:           String(fmt.Sprintf("Integration run %s - plan", runNr)),
 			Directory:         String("./testdata"),
 			Type:              RunTypePlan,
 			WaitForCompletion: true,
@@ -52,7 +52,7 @@ func TestIntegration(t *testing.T) {
 
 	t.Run("Apply", func(t *testing.T) {
 		applyOptions := RunOptions{
-			Message:           String(fmt.Sprintf("Apply of run %s", runNr)),
+			Message:           String(fmt.Sprintf("Integration run %s - apply", runNr)),
 			Directory:         String("./testdata"),
 			Type:              RunTypeApply,
 			WaitForCompletion: true,
@@ -78,7 +78,7 @@ func TestIntegration(t *testing.T) {
 
 	t.Run("Plan - should have no changes", func(t *testing.T) {
 		planOptions := RunOptions{
-			Message:           String(fmt.Sprintf("Plan for %s", runNr)),
+			Message:           String(fmt.Sprintf("Integration run %s - plan", runNr)),
 			Directory:         String("./testdata"),
 			Type:              RunTypePlan,
 			WaitForCompletion: true,
@@ -93,7 +93,7 @@ func TestIntegration(t *testing.T) {
 
 	t.Run("Destroy", func(t *testing.T) {
 		planOptions := RunOptions{
-			Message:           String(fmt.Sprintf("Plan for %s", runNr)),
+			Message:           String(fmt.Sprintf("Integration run %s - destroy", runNr)),
 			Directory:         String("./testdata"),
 			Type:              RunTypeDestroy,
 			WaitForCompletion: true,
