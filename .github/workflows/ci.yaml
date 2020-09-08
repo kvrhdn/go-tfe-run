@@ -25,9 +25,6 @@ jobs:
         env:
           TFE_TOKEN: ${{ secrets.TFE_TOKEN }}
 
-      - run: go build -v .
-        working-directory: cmd/
-
       - run: go vet ./...
 
       - name: Formatting
