@@ -35,11 +35,11 @@ func TestIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Run("Speculative run, with changes", func(t *testing.T) {
+	t.Run("Plan - should have changes", func(t *testing.T) {
 		planOptions := RunOptions{
 			Message:           String(fmt.Sprintf("Plan for %s", runNr)),
 			Directory:         String("./testdata"),
-			Speculative:       true,
+			Type:              RunTypePlan,
 			WaitForCompletion: true,
 			TfVars:            String(fmt.Sprintf("github_run_number = \"%s\"", runNr)),
 		}
@@ -50,11 +50,11 @@ func TestIntegration(t *testing.T) {
 		assert.Equal(t, true, *planOutput.HasChanges)
 	})
 
-	t.Run("Non-speculative run, with changes", func(t *testing.T) {
+	t.Run("Apply", func(t *testing.T) {
 		applyOptions := RunOptions{
 			Message:           String(fmt.Sprintf("Apply of run %s", runNr)),
 			Directory:         String("./testdata"),
-			Speculative:       false,
+			Type:              RunTypeApply,
 			WaitForCompletion: true,
 			TfVars:            String(fmt.Sprintf("github_run_number = \"%s\"", runNr)),
 		}
@@ -76,11 +76,11 @@ func TestIntegration(t *testing.T) {
 		assert.Equal(t, expectedOutputs, outputs)
 	})
 
-	t.Run("Speculative run, no changes", func(t *testing.T) {
+	t.Run("Plan - should have no changes", func(t *testing.T) {
 		planOptions := RunOptions{
 			Message:           String(fmt.Sprintf("Plan for %s", runNr)),
 			Directory:         String("./testdata"),
-			Speculative:       true,
+			Type:              RunTypePlan,
 			WaitForCompletion: true,
 			TfVars:            String(fmt.Sprintf("github_run_number = \"%s\"", runNr)),
 		}
@@ -89,5 +89,27 @@ func TestIntegration(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Contains(t, planOutput.RunURL, "https://app.terraform.io/app/kvrhdn/workspaces/go-tfe-run/runs/run-")
 		assert.Equal(t, false, *planOutput.HasChanges)
+	})
+
+	t.Run("Destroy", func(t *testing.T) {
+		planOptions := RunOptions{
+			Message:           String(fmt.Sprintf("Plan for %s", runNr)),
+			Directory:         String("./testdata"),
+			Type:              RunTypeDestroy,
+			WaitForCompletion: true,
+			TfVars:            String(fmt.Sprintf("github_run_number = \"%s\"", runNr)),
+		}
+		planOutput, err := client.Run(ctx, planOptions)
+
+		assert.NoError(t, err)
+		assert.Contains(t, planOutput.RunURL, "https://app.terraform.io/app/kvrhdn/workspaces/go-tfe-run/runs/run-")
+		assert.Equal(t, true, *planOutput.HasChanges)
+	})
+
+	t.Run("Get terraform outputs - should be empty", func(t *testing.T) {
+		outputs, err := client.GetTerraformOutputs(ctx)
+
+		assert.NoError(t, err)
+		assert.Empty(t, outputs)
 	})
 }
