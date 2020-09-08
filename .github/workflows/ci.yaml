@@ -4,8 +4,8 @@ on:
   push:
 
 jobs:
-  ci:
-    name: CI
+  test:
+    name: Test
     runs-on: ubuntu-latest
 
     steps:
@@ -26,6 +26,23 @@ jobs:
           TFE_TOKEN: ${{ secrets.TFE_TOKEN }}
 
       - run: go vet ./...
+
+  fmt:
+    name: Formatting
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: kvrhdn/gha-buildevents@v1
+        with:
+          apikey: ${{ secrets.HONEYCOMB_APIKEY }}
+          dataset: go-tfe-run
+          job-status: ${{ job.status }}
+
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.15
+
+      - uses: actions/checkout@v2
 
       - name: Formatting
         run: |
