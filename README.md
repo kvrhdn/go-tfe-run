@@ -7,9 +7,9 @@
 
 A Go library to create and follow up on a run on Terraform Cloud. This library uses the [Terraform Cloud API](https://www.terraform.io/docs/cloud/run/api.html) and does not rely on a local Terraform installation.
 
-When is ths useful?
+When would this be useful?
 
-- You want to configure parameters that are not available using the CLI, for example the name of the run or whether it is a speculative plan.
+- You want to configure parameters that are not available using the CLI, for example the name of the run.
 - You want to schedule a run but not wait for its completion.
 - You are in an environment without Terraform CLI installed.
 
