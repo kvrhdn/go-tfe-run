@@ -68,6 +68,9 @@ type RunOptions struct {
 	Directory *string
 	// The type of run to schedule.
 	Type RunType
+	// A list of resource addresses that are passed to the -target flag. For
+	// more details, check https://www.terraform.io/docs/commands/plan.html#resource-targeting
+	TargetAddrs []string
 	// Whether we should wait for the non-speculative run to be applied. This
 	// will block until the run is finished.
 	WaitForCompletion bool
@@ -188,6 +191,7 @@ func (c *Client) Run(ctx context.Context, options RunOptions) (output RunOutput,
 		Workspace:            c.workspace,
 		ConfigurationVersion: cv,
 		IsDestroy:            tfe.Bool(options.Type == RunTypeDestroy),
+		TargetAddrs:          options.TargetAddrs,
 		Message:              options.Message,
 	}
 	r, err = c.client.Runs.Create(ctx, rOptions)

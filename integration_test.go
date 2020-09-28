@@ -71,7 +71,8 @@ func TestIntegration(t *testing.T) {
 		assert.NoError(t, err)
 
 		expectedOutputs := map[string]string{
-			"marker_message": fmt.Sprintf("Integration - run %s", runNr),
+			"marker_message_1": fmt.Sprintf("Integration - run %s - marker #1", runNr),
+			"marker_message_2": fmt.Sprintf("Integration - run %s - marker #2", runNr),
 		}
 		assert.Equal(t, expectedOutputs, outputs)
 	})
@@ -89,6 +90,33 @@ func TestIntegration(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Contains(t, planOutput.RunURL, "https://app.terraform.io/app/kvrhdn/workspaces/go-tfe-run/runs/run-")
 		assert.Equal(t, false, *planOutput.HasChanges)
+	})
+
+	t.Run("Destroy - with address targeting", func(t *testing.T) {
+		planOptions := RunOptions{
+			Message:           String(fmt.Sprintf("Integration run %s - destroy", runNr)),
+			Directory:         String("./testdata"),
+			Type:              RunTypeDestroy,
+			TargetAddrs:       []string{"honeycombio_marker.dummy_resource_1"},
+			WaitForCompletion: true,
+			TfVars:            String(fmt.Sprintf("github_run_number = \"%s\"", runNr)),
+		}
+		planOutput, err := client.Run(ctx, planOptions)
+
+		assert.NoError(t, err)
+		assert.Contains(t, planOutput.RunURL, "https://app.terraform.io/app/kvrhdn/workspaces/go-tfe-run/runs/run-")
+		assert.Equal(t, true, *planOutput.HasChanges)
+	})
+
+	t.Run("Get terraform outputs - should only have marker #2", func(t *testing.T) {
+		outputs, err := client.GetTerraformOutputs(ctx)
+
+		assert.NoError(t, err)
+
+		expectedOutputs := map[string]string{
+			"marker_message_2": fmt.Sprintf("Integration - run %s - marker #2", runNr),
+		}
+		assert.Equal(t, expectedOutputs, outputs)
 	})
 
 	t.Run("Destroy", func(t *testing.T) {

@@ -19,11 +19,20 @@ variable "github_run_number" {
   type = number
 }
 
-resource "honeycombio_marker" "dummy_resource" {
-  message = "Integration - run ${var.github_run_number}"
+resource "honeycombio_marker" "dummy_resource_1" {
+  message = "Integration - run ${var.github_run_number} - marker #1"
   dataset = "go-tfe-run"
 }
 
-output "marker_message" {
-  value = honeycombio_marker.dummy_resource.message
+resource "honeycombio_marker" "dummy_resource_2" {
+  message = "Integration - run ${var.github_run_number} - marker #2"
+  dataset = "go-tfe-run"
+}
+
+output "marker_message_1" {
+  value = honeycombio_marker.dummy_resource_1.message
+}
+
+output "marker_message_2" {
+  value = honeycombio_marker.dummy_resource_2.message
 }
