@@ -3,6 +3,7 @@
 [![CI](https://github.com/kvrhdn/go-tfe-run/workflows/CI/badge.svg)](https://github.com/kvrhdn/go-tfe-run/actions?query=workflow%3ACI)
 [![Integration](https://github.com/kvrhdn/go-tfe-run/workflows/Integration/badge.svg)](https://github.com/kvrhdn/go-tfe-run/actions?query=workflow%3AIntegration)
 [![Go Report Card](https://goreportcard.com/badge/github.com/kvrhdn/go-tfe-run)](https://goreportcard.com/report/github.com/kvrhdn/go-tfe-run)
+[![codecov](https://codecov.io/gh/kvrhdn/go-tfe-run/branch/main/graph/badge.svg)](https://codecov.io/gh/kvrhdn/go-tfe-run)
 
 A Go library to create and follow up on a run on Terraform Cloud. This library uses the [Terraform Cloud API](https://www.terraform.io/docs/cloud/run/api.html) and does not rely on a local Terraform installation.
 
