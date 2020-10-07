@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-tfe"
+	"github.com/kvrhdn/go-tfe-run/internal/httputils"
 )
 
 // ClientConfig groups properties to configure a Client.
@@ -39,8 +40,11 @@ type Client struct {
 
 // NewClient creates a Client from ClientConfig.
 func NewClient(ctx context.Context, cfg ClientConfig) (*Client, error) {
+	// Note: go-tfe already contains its own retrying HTTP client, this extra
+	// retrying HTTP client should only retry on "TLS Handshake timeout" errors
 	config := &tfe.Config{
-		Token: cfg.Token,
+		Token:      cfg.Token,
+		HTTPClient: httputils.RetryOnTLSHandhsakeTimeoutClient(),
 	}
 	tfeClient, err := tfe.NewClient(config)
 	if err != nil {
