@@ -10,13 +10,14 @@ terraform {
   required_providers {
     honeycombio = {
       source  = "kvrhdn/honeycombio"
-      version = "~> 0.0.9"
+      version = "~> 0.1.2"
     }
   }
 }
 
 variable "github_run_number" {
-  type = number
+  type    = number
+  default = 0
 }
 
 resource "honeycombio_marker" "dummy_resource_1" {

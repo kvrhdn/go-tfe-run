@@ -94,7 +94,7 @@ func TestIntegration(t *testing.T) {
 
 	t.Run("Destroy - with address targeting", func(t *testing.T) {
 		planOptions := RunOptions{
-			Message:           String(fmt.Sprintf("Integration run %s - destroy", runNr)),
+			Message:           String(fmt.Sprintf("Integration run %s - destroy with address targeting", runNr)),
 			Directory:         String("./testdata"),
 			Type:              RunTypeDestroy,
 			TargetAddrs:       []string{"honeycombio_marker.dummy_resource_1"},
@@ -109,6 +109,8 @@ func TestIntegration(t *testing.T) {
 	})
 
 	t.Run("Get terraform outputs - should only have marker #2", func(t *testing.T) {
+		t.Skip("Skipping until https://github.com/hashicorp/terraform/issues/27151 is fixed")
+
 		outputs, err := client.GetTerraformOutputs(ctx)
 
 		assert.NoError(t, err)
