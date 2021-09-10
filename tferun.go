@@ -281,8 +281,9 @@ type minimalTerraformState struct {
 }
 
 type terraformOutput struct {
-	Type  string `json:"type"`
-	Value string `json:"value"`
+	ValueRaw  json.RawMessage `json:"value"`
+	ValueType string          `json:"type"`
+	Sensitive bool            `json:"sensitive,omitempty"`
 }
 
 // GetTerraformOutputs retrieves the outputs from the current Terraform state.
@@ -305,7 +306,20 @@ func (c *Client) GetTerraformOutputs(ctx context.Context) (map[string]string, er
 
 	outputs := make(map[string]string)
 	for k, v := range state.Outputs {
-		outputs[k] = v.Value
+		if v.Sensitive {
+			fmt.Printf("Skipping Sensitive output: %v\n", k)
+			continue
+		}
+		switch v.ValueType {
+		case "bool":
+			outputs[k] = string(v.ValueRaw)
+		case "number":
+			outputs[k] = string(v.ValueRaw)
+		case "string":
+			outputs[k] = string(v.ValueRaw)
+		default:
+			fmt.Printf("Skipping output with complex type %v\n", k)
+		}
 	}
 
 	fmt.Printf("Outputs from current state:\n")
