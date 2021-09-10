@@ -6,6 +6,7 @@
 package tferun
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -281,9 +282,16 @@ type minimalTerraformState struct {
 }
 
 type terraformOutput struct {
-	ValueRaw  json.RawMessage `json:"value"`
-	ValueType string          `json:"type"`
-	Sensitive bool            `json:"sensitive,omitempty"`
+	ValueRaw     json.RawMessage `json:"value"`
+	ValueTypeRaw json.RawMessage `json:"type"`
+	Sensitive    bool            `json:"sensitive,omitempty"`
+}
+
+func bufDecoder(buf []byte) *json.Decoder {
+	r := bytes.NewReader(buf)
+	dec := json.NewDecoder(r)
+	dec.UseNumber()
+	return dec
 }
 
 // GetTerraformOutputs retrieves the outputs from the current Terraform state.
@@ -307,10 +315,17 @@ func (c *Client) GetTerraformOutputs(ctx context.Context) (map[string]string, er
 	outputs := make(map[string]string)
 	for k, v := range state.Outputs {
 		if v.Sensitive {
-			fmt.Printf("Skipping Sensitive output: %v\n", k)
+			fmt.Printf("Skipping sensitive output '%v'\n", k)
 			continue
 		}
-		switch v.ValueType {
+
+		decoder := bufDecoder(v.ValueTypeRaw)
+		outputType, err := decoder.Token()
+		if err != nil {
+			return nil, err
+		}
+
+		switch outputType {
 		case "bool":
 			outputs[k] = string(v.ValueRaw)
 		case "number":
@@ -318,7 +333,7 @@ func (c *Client) GetTerraformOutputs(ctx context.Context) (map[string]string, er
 		case "string":
 			outputs[k] = string(v.ValueRaw)
 		default:
-			fmt.Printf("Skipping output with complex type %v\n", k)
+			fmt.Printf("Skipping output '%v'. It is a complex type %v\n", k, string(v.ValueTypeRaw))
 		}
 	}
 
