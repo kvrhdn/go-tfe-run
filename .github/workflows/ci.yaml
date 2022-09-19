@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: kvrhdn/gha-buildevents@v1
+      - uses: kvrhdn/gha-buildevents@v2
         with:
           apikey: ${{ secrets.HONEYCOMB_APIKEY }}
           dataset: go-tfe-run
@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: kvrhdn/gha-buildevents@v1
+      - uses: kvrhdn/gha-buildevents@v2
         with:
           apikey: ${{ secrets.HONEYCOMB_APIKEY }}
           dataset: go-tfe-run
